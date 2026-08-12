@@ -41,13 +41,11 @@ from datetime import datetime, timezone, timedelta
 
 QUERIES = [
     {"label": "UBER", "query": '"$UBER"'},
-    {"label": "GRAB", "query": '"$GRAB"'},
-    {"label": "TSLA", "query": '"$TSLA"'},
-    # Pre-IPO / no-cashtag example: plain name search, narrowed with context
-    # words so "Unitree" chatter about the actual company outranks noise.
-    {"label": "Unitree", "query": '"Unitree" (robot OR robotics OR IPO OR humanoid OR stock)'},
+    # Add more here when you actually want them tracked, e.g.:
+    # {"label": "GRAB", "query": '"$GRAB"'},
+    # {"label": "Unitree", "query": '"Unitree" (robot OR robotics OR IPO OR humanoid OR stock)'},
 ]
-SAMPLE_SIZE = 100                  # tweets pulled per run for sentiment scoring (max 100/request)
+SAMPLE_SIZE = 50                   # tweets pulled per run for sentiment scoring (was 100 — this halves the per-run cost)
 DATA_FILE = os.path.join(os.path.dirname(__file__), "data.json")
 X_API_BASE = "https://api.x.com/2"
 
