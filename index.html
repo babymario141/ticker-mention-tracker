@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ticker Mention Tracker</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+  onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js';document.head.appendChild(s);"></script>
 <style>
   :root {
     --ink: #10151c;
@@ -435,7 +436,15 @@ function render() {
     return;
   }
   renderStats(rows);
-  renderCharts(rows);
+  try {
+    if (typeof Chart === 'undefined') throw new Error('Chart.js failed to load');
+    renderCharts(rows);
+  } catch (e) {
+    ['volumeChart', 'sentimentChart'].forEach(id => {
+      const canvas = document.getElementById(id);
+      canvas.insertAdjacentHTML('afterend', '<p style="font-family:var(--mono);font-size:11px;color:var(--bear);">Chart library failed to load — likely blocked by an ad/privacy blocker extension. Try disabling it for this site, or check the browser console for details.</p>');
+    });
+  }
   renderSignalStrip(rows);
 }
 
