@@ -1,0 +1,35 @@
+name: Collect ticker mentions
+
+on:
+  schedule:
+    # Runs at 00:00 and 12:00 UTC. Adjust to taste — X pay-per-use has no
+    # hard cadence limit that matters at this volume.
+    - cron: "0 0,12 * * *"
+  workflow_dispatch: {}   # lets you trigger a manual run from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run collector
+        env:
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          LOOKBACK_HOURS: "12"
+        run: python collector.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "ticker-tracker-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.json
+          git diff --quiet --cached || git commit -m "Update mention data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
