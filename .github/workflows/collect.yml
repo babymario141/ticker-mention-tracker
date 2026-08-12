@@ -1,11 +1,7 @@
 name: Collect ticker mentions
 
 on:
-  schedule:
-    # Runs at 00:00 and 12:00 UTC. Adjust to taste — X pay-per-use has no
-    # hard cadence limit that matters at this volume.
-    - cron: "0 0,12 * * *"
-  workflow_dispatch: {}   # lets you trigger a manual run from the Actions tab
+  workflow_dispatch: {}   # manual only — no schedule, so no automatic spend
 
 permissions:
   contents: write
