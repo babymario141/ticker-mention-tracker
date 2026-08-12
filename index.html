@@ -302,35 +302,49 @@ function setupRangeBar() {
   });
 }
 
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchPrice(symbol, rangeKey) {
   const cacheKey = `${symbol}:${rangeKey}`;
   if (priceCache[cacheKey]) return priceCache[cacheKey];
 
   const range = RANGES.find(r => r.key === rangeKey);
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range.yahooRange}&interval=${range.yahooInterval}`;
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000); // don't hang forever on a slow proxy
+  const proxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent(yahooUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+  ];
 
-  try {
-    const res = await fetch(proxyUrl, { signal: controller.signal });
-    const json = await res.json();
-    const result = json && json.chart && json.chart.result && json.chart.result[0];
-    if (!result) return null;
-    const timestamps = result.timestamp || [];
-    const closes = (result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close) || [];
-    const points = timestamps
-      .map((t, i) => ({ x: t * 1000, y: closes[i] }))
-      .filter(p => p.y !== null && p.y !== undefined);
-    priceCache[cacheKey] = points;
-    return points;
-  } catch (e) {
-    console.warn('Price fetch failed or timed out for', symbol, e);
-    return null;
-  } finally {
-    clearTimeout(timeout);
+  for (const proxyUrl of proxies) {
+    try {
+      const json = await fetchWithTimeout(proxyUrl, 6000);
+      const result = json && json.chart && json.chart.result && json.chart.result[0];
+      if (!result) continue;
+      const timestamps = result.timestamp || [];
+      const closes = (result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close) || [];
+      const points = timestamps
+        .map((t, i) => ({ x: t * 1000, y: closes[i] }))
+        .filter(p => p.y !== null && p.y !== undefined);
+      if (points.length) {
+        priceCache[cacheKey] = points;
+        return points;
+      }
+    } catch (e) {
+      console.warn('Price proxy failed:', proxyUrl, e);
+    }
   }
+  return null;
 }
 
 function renderStats(rows) {
@@ -500,11 +514,8 @@ async function render() {
     }
   };
 
-  // Draw mentions/sentiment immediately — don't make the user wait on a slow price fetch.
   drawCharts(null);
 
-  // Then fetch price in the background and re-draw with the overlay once it's ready,
-  // but only if the user hasn't already switched ticker/range in the meantime.
   if (isListedSymbol(ACTIVE_TICKER)) {
     document.getElementById('priceLegend1').style.display = 'inline';
     document.getElementById('priceLegend1').textContent = '• Loading price…';
@@ -515,8 +526,10 @@ async function render() {
         if (pricePoints) {
           drawCharts(pricePoints);
         } else {
-          document.getElementById('priceLegend1').style.display = 'none';
-          document.getElementById('priceLegend2').style.display = 'none';
+          document.getElementById('priceLegend1').style.display = 'inline';
+          document.getElementById('priceLegend1').innerHTML = '<span class="legend-dot" style="background:var(--neutral)"></span>Price unavailable';
+          document.getElementById('priceLegend2').style.display = 'inline';
+          document.getElementById('priceLegend2').innerHTML = '<span class="legend-dot" style="background:var(--neutral)"></span>Price unavailable';
         }
       }
     });
