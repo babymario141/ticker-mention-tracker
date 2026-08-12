@@ -6,27 +6,30 @@
 <title>Ticker Mention Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
   onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js';document.head.appendChild(s);"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"
+  onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js';document.head.appendChild(s);"></script>
 <style>
   :root {
-    --ink: #10151c;
-    --paper: #f6f4ee;
+    --ink: #14171c;
+    --paper: #f7f7f8;
     --panel: #ffffff;
-    --rule: #dcd8cc;
-    --bull: #1f7a4d;
-    --bear: #b0402e;
-    --neutral: #9a9584;
-    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-    --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+    --rule: #e2e2e6;
+    --bull: #1a8754;
+    --bear: #c0392b;
+    --price: #5b6cff;
+    --neutral: #8b8d95;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
   * { box-sizing: border-box; }
   body {
     margin: 0;
     background: var(--paper);
     color: var(--ink);
-    font-family: var(--sans);
+    font-family: var(--font);
     padding: 32px 24px 64px;
+    -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 980px; margin: 0 auto; }
 
@@ -34,56 +37,55 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    border-bottom: 2px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
     padding-bottom: 16px;
     margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 16px;
   }
   .eyebrow {
-    font-family: var(--mono);
-    font-size: 13px;
-    letter-spacing: 0.12em;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--neutral);
     margin: 0 0 4px;
   }
   h1 {
-    font-size: 30px;
+    font-size: 28px;
     margin: 0;
     font-weight: 700;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   .updated {
-    font-family: var(--mono);
-    font-size: 12px;
+    font-size: 13px;
     color: var(--neutral);
     text-align: right;
   }
 
-  /* ticker search / select */
-  .ticker-bar {
-    position: relative;
-    margin-bottom: 24px;
-  }
+  .ticker-bar { position: relative; margin-bottom: 20px; }
   #tickerInput {
     width: 100%;
-    font-family: var(--mono);
-    font-size: 18px;
-    font-weight: 600;
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 500;
     padding: 12px 16px;
-    border: 2px solid var(--ink);
+    border: 1.5px solid var(--rule);
+    border-radius: 10px;
     background: var(--panel);
     color: var(--ink);
     outline: none;
   }
+  #tickerInput:focus { border-color: var(--ink); }
   #tickerInput::placeholder { color: var(--neutral); font-weight: 400; }
   #tickerList {
     list-style: none;
-    margin: 4px 0 0;
-    padding: 0;
+    margin: 6px 0 0;
+    padding: 4px;
     border: 1px solid var(--rule);
+    border-radius: 10px;
     background: var(--panel);
+    box-shadow: 0 8px 24px rgba(20,23,28,0.08);
     position: absolute;
     width: 100%;
     max-height: 220px;
@@ -93,106 +95,51 @@
   }
   #tickerList.open { display: block; }
   #tickerList li {
-    padding: 10px 16px;
-    font-family: var(--mono);
+    padding: 9px 12px;
+    border-radius: 6px;
     font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
   }
   #tickerList li:hover, #tickerList li.active { background: var(--paper); }
-  #tickerList .mini-sentiment { color: var(--neutral); }
+  #tickerList .mini-sentiment { color: var(--neutral); font-variant-numeric: tabular-nums; }
   #tickerList .mini-sentiment.bull { color: var(--bull); }
   #tickerList .mini-sentiment.bear { color: var(--bear); }
 
-  .stat-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--rule);
-    border: 1px solid var(--rule);
-    margin-bottom: 28px;
-  }
-  .stat {
-    background: var(--panel);
-    padding: 16px 18px;
-  }
-  .stat-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--neutral);
-    margin-bottom: 6px;
-  }
-  .stat-value {
-    font-family: var(--mono);
-    font-size: 24px;
+  .range-bar { display: flex; gap: 4px; margin-bottom: 20px; }
+  .range-btn {
+    font-family: var(--font);
+    font-size: 13px;
     font-weight: 600;
+    padding: 7px 14px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--neutral);
+    cursor: pointer;
   }
+  .range-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .range-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; }
+  .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--neutral); margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
   .stat-value.bull { color: var(--bull); }
   .stat-value.bear { color: var(--bear); }
-  .stat-sub {
-    font-size: 12px;
-    color: var(--neutral);
-    margin-top: 4px;
-  }
+  .stat-sub { font-size: 12px; color: var(--neutral); margin-top: 4px; }
 
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    padding: 20px 20px 8px;
-    margin-bottom: 20px;
-  }
-  .panel-title {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--neutral);
-    margin: 0 0 14px;
-  }
-  canvas { max-height: 280px; }
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 20px 8px; margin-bottom: 20px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .panel-title { font-size: 13px; font-weight: 600; color: var(--neutral); margin: 0; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .legend-item { font-size: 11px; color: var(--neutral); margin-left: 12px; }
+  canvas { max-height: 300px; }
 
-  .signal-strip {
-    display: flex;
-    gap: 2px;
-    margin-top: 6px;
-  }
-  .signal-cell {
-    flex: 1;
-    height: 28px;
-    position: relative;
-  }
-  .signal-cell:hover::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: 34px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--ink);
-    color: var(--paper);
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 4px 6px;
-    white-space: nowrap;
-    z-index: 2;
-  }
-
-  footer {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--neutral);
-    margin-top: 24px;
-    line-height: 1.6;
-  }
-  .empty {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--neutral);
-    padding: 40px 0;
-    text-align: center;
-  }
+  footer { font-size: 12px; color: var(--neutral); margin-top: 24px; line-height: 1.7; }
+  .empty { font-size: 13px; color: var(--neutral); padding: 40px 0; text-align: center; }
 </style>
 </head>
 <body>
@@ -207,28 +154,41 @@
   </header>
 
   <div class="ticker-bar">
-    <input id="tickerInput" type="text" placeholder="Search a ticker or company (e.g. UBER, Unitree)" autocomplete="off">
+    <input id="tickerInput" type="text" placeholder="Search a ticker or company (e.g. UBER)" autocomplete="off">
     <ul id="tickerList"></ul>
   </div>
+
+  <div class="range-bar" id="rangeBar"></div>
 
   <div class="stat-row" id="stats"></div>
 
   <div class="panel">
-    <p class="panel-title">Mention volume</p>
-    <canvas id="volumeChart" height="90"></canvas>
+    <div class="panel-head">
+      <p class="panel-title">Mention volume vs. price</p>
+      <div>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--ink)"></span>Mentions</span>
+        <span class="legend-item" id="priceLegend1" style="display:none;"><span class="legend-dot" style="background:var(--price)"></span>Price</span>
+      </div>
+    </div>
+    <canvas id="volumeChart" height="100"></canvas>
   </div>
 
   <div class="panel">
-    <p class="panel-title">Sentiment score (bullish +1 &nbsp;·&nbsp; bearish −1)</p>
-    <canvas id="sentimentChart" height="90"></canvas>
-    <p class="panel-title" style="margin-top:16px;">Bull / bear composition, per snapshot</p>
-    <div class="signal-strip" id="signalStrip"></div>
+    <div class="panel-head">
+      <p class="panel-title">Sentiment score vs. price &nbsp;(bullish +1 &middot; bearish &minus;1)</p>
+      <div>
+        <span class="legend-item"><span class="legend-dot" style="background:#6b6656"></span>Sentiment</span>
+        <span class="legend-item" id="priceLegend2" style="display:none;"><span class="legend-dot" style="background:var(--price)"></span>Price</span>
+      </div>
+    </div>
+    <canvas id="sentimentChart" height="100"></canvas>
     <div style="height:14px;"></div>
   </div>
 
   <footer>
-    Volume: X API tweets/counts/recent, summed over each polling window.<br>
-    Sentiment: lexicon score over a ~100-tweet sample per snapshot (per ticker, English, no retweets). Directional signal, not investment advice.
+    Volume: X API tweets/counts/recent, summed over each polling window &middot; run manually from the repo's Actions tab.<br>
+    Sentiment: lexicon score over a tweet sample per snapshot. Price: Yahoo Finance, fetched client-side &mdash; only shown for symbols that are actually listed.<br>
+    Directional signal, not investment advice.
   </footer>
 
 </div>
@@ -236,8 +196,19 @@
 <script>
 let ALL_DATA = {};
 let ACTIVE_TICKER = null;
+let ACTIVE_RANGE = '1M';
 let volumeChart = null;
 let sentimentChart = null;
+let priceCache = {};
+
+const RANGES = [
+  { key: '1D', days: 1,   yahooRange: '1d',  yahooInterval: '5m' },
+  { key: '1W', days: 7,   yahooRange: '5d',  yahooInterval: '15m' },
+  { key: '1M', days: 30,  yahooRange: '1mo', yahooInterval: '1d' },
+  { key: '6M', days: 182, yahooRange: '6mo', yahooInterval: '1d' },
+  { key: '1Y', days: 365, yahooRange: '1y',  yahooInterval: '1d' },
+  { key: 'YTD', days: null, yahooRange: 'ytd', yahooInterval: '1d' },
+];
 
 async function loadData() {
   const res = await fetch('data.json');
@@ -258,12 +229,19 @@ function scoreClass(score) {
   return score > 0.15 ? 'bull' : score < -0.15 ? 'bear' : '';
 }
 
-// Cashtag-looking labels ("UBER") get a $ prefix; keyword labels ("Unitree") don't.
+function isListedSymbol(label) {
+  return /^[A-Z]{1,6}$/.test(label);
+}
 function displayLabel(label) {
-  return /^[A-Z]{1,6}$/.test(label) ? '$' + label : label;
+  return isListedSymbol(label) ? '$' + label : label;
 }
 
-// ---- ticker search / dropdown ----
+function rangeCutoff(rangeKey) {
+  const now = new Date();
+  const range = RANGES.find(r => r.key === rangeKey);
+  if (rangeKey === 'YTD') return new Date(now.getFullYear(), 0, 1);
+  return new Date(now.getTime() - range.days * 24 * 60 * 60 * 1000);
+}
 
 function renderTickerList(filter = '') {
   const list = document.getElementById('tickerList');
@@ -309,7 +287,46 @@ function setupTickerSearch() {
   });
 }
 
-// ---- rendering ----
+function setupRangeBar() {
+  const bar = document.getElementById('rangeBar');
+  bar.innerHTML = RANGES.map(r =>
+    `<button class="range-btn ${r.key === ACTIVE_RANGE ? 'active' : ''}" data-range="${r.key}">${r.key}</button>`
+  ).join('');
+  bar.querySelectorAll('.range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ACTIVE_RANGE = btn.dataset.range;
+      bar.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+  });
+}
+
+async function fetchPrice(symbol, rangeKey) {
+  const cacheKey = `${symbol}:${rangeKey}`;
+  if (priceCache[cacheKey]) return priceCache[cacheKey];
+
+  const range = RANGES.find(r => r.key === rangeKey);
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range.yahooRange}&interval=${range.yahooInterval}`;
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
+
+  try {
+    const res = await fetch(proxyUrl);
+    const json = await res.json();
+    const result = json && json.chart && json.chart.result && json.chart.result[0];
+    if (!result) return null;
+    const timestamps = result.timestamp || [];
+    const closes = (result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close) || [];
+    const points = timestamps
+      .map((t, i) => ({ x: t * 1000, y: closes[i] }))
+      .filter(p => p.y !== null && p.y !== undefined);
+    priceCache[cacheKey] = points;
+    return points;
+  } catch (e) {
+    console.warn('Price fetch failed for', symbol, e);
+    return null;
+  }
+}
 
 function renderStats(rows) {
   const el = document.getElementById('stats');
@@ -339,91 +356,108 @@ function renderStats(rows) {
       <div class="stat-sub">of ${latest.sample_size} sampled</div>
     </div>
     <div class="stat">
-      <div class="stat-label">Snapshots tracked</div>
+      <div class="stat-label">Snapshots in range</div>
       <div class="stat-value">${rows.length}</div>
       <div class="stat-sub">since ${fmtTime(rows[0].timestamp)}</div>
     </div>
   `;
 }
 
-function renderSignalStrip(rows) {
-  const el = document.getElementById('signalStrip');
-  el.innerHTML = rows.map(r => {
-    const s = r.sentiment_score;
-    const color = s > 0.15 ? '#1f7a4d' : s < -0.15 ? '#b0402e' : '#c9c4b4';
-    return `<div class="signal-cell" style="background:${color}" data-tip="${fmtTime(r.timestamp)} · ${s.toFixed(2)}"></div>`;
-  }).join('');
+function timeScaleOptions() {
+  return {
+    x: {
+      type: 'time',
+      time: { tooltipFormat: 'MMM d, HH:mm' },
+      grid: { display: false },
+      ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 0 }
+    }
+  };
 }
 
-function renderCharts(rows) {
-  const labels = rows.map(r => fmtTime(r.timestamp));
+function renderCharts(rows, pricePoints) {
+  const mentionPoints = rows.map(r => ({ x: new Date(r.timestamp).getTime(), y: r.mention_count }));
+  const sentimentPoints = rows.map(r => ({ x: new Date(r.timestamp).getTime(), y: r.sentiment_score }));
 
   if (volumeChart) volumeChart.destroy();
   if (sentimentChart) sentimentChart.destroy();
 
+  const hasPrice = pricePoints && pricePoints.length > 0;
+  document.getElementById('priceLegend1').style.display = hasPrice ? 'inline' : 'none';
+  document.getElementById('priceLegend2').style.display = hasPrice ? 'inline' : 'none';
+
+  const volumeDatasets = [{
+    label: 'Mentions', data: mentionPoints,
+    borderColor: '#14171c', backgroundColor: 'rgba(20,23,28,0.05)',
+    fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2, yAxisID: 'y',
+  }];
+  if (hasPrice) {
+    volumeDatasets.push({
+      label: 'Price', data: pricePoints,
+      borderColor: '#5b6cff', backgroundColor: 'transparent',
+      fill: false, tension: 0.15, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y1',
+    });
+  }
+
   volumeChart = new Chart(document.getElementById('volumeChart'), {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data: rows.map(r => r.mention_count),
-        borderColor: '#10151c',
-        backgroundColor: 'rgba(16,21,28,0.06)',
-        fill: true,
-        tension: 0.25,
-        pointRadius: 0,
-        borderWidth: 2,
-      }]
-    },
+    data: { datasets: volumeDatasets },
     options: {
       responsive: true,
+      interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, maxRotation: 0 } },
-        y: { grid: { color: '#eeeae0' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 } } }
-      }
+      scales: Object.assign(timeScaleOptions(), {
+        y: { position: 'left', grid: { color: '#eeeeef' }, ticks: { font: { family: 'Inter', size: 10 } } },
+        y1: hasPrice ? { position: 'right', grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 } } } : { display: false }
+      })
     }
   });
 
+  const sentimentDatasets = [{
+    label: 'Sentiment', data: sentimentPoints,
+    borderColor: '#6b6656',
+    backgroundColor: (ctx) => {
+      const chart = ctx.chart;
+      const c = chart.ctx, chartArea = chart.chartArea;
+      if (!chartArea) return 'rgba(0,0,0,0)';
+      const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      g.addColorStop(0, 'rgba(26,135,84,0.2)');
+      g.addColorStop(0.5, 'rgba(139,141,149,0.08)');
+      g.addColorStop(1, 'rgba(192,57,43,0.2)');
+      return g;
+    },
+    fill: true, tension: 0.25, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y',
+  }];
+  if (hasPrice) {
+    sentimentDatasets.push({
+      label: 'Price', data: pricePoints,
+      borderColor: '#5b6cff', backgroundColor: 'transparent',
+      fill: false, tension: 0.15, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y1',
+    });
+  }
+
   sentimentChart = new Chart(document.getElementById('sentimentChart'), {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data: rows.map(r => r.sentiment_score),
-        borderColor: '#6b6656',
-        backgroundColor: (ctx) => {
-          const {chart} = ctx;
-          const {ctx: c, chartArea} = chart;
-          if (!chartArea) return 'rgba(0,0,0,0)';
-          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          g.addColorStop(0, 'rgba(31,122,77,0.25)');
-          g.addColorStop(0.5, 'rgba(154,149,132,0.1)');
-          g.addColorStop(1, 'rgba(176,64,46,0.25)');
-          return g;
-        },
-        fill: true,
-        tension: 0.25,
-        pointRadius: 0,
-        borderWidth: 1.5,
-      }]
-    },
+    data: { datasets: sentimentDatasets },
     options: {
       responsive: true,
+      interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, maxRotation: 0 } },
-        y: { min: -1, max: 1, grid: { color: '#eeeae0' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 } } }
-      }
+      scales: Object.assign(timeScaleOptions(), {
+        y: { position: 'left', min: -1, max: 1, grid: { color: '#eeeeef' }, ticks: { font: { family: 'Inter', size: 10 } } },
+        y1: hasPrice ? { position: 'right', grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 } } } : { display: false }
+      })
     }
   });
 }
 
-function render() {
-  const rows = (ALL_DATA[ACTIVE_TICKER] || []).slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+async function render() {
+  const cutoff = rangeCutoff(ACTIVE_RANGE);
+  const allRows = (ALL_DATA[ACTIVE_TICKER] || []).slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const rows = allRows.filter(r => new Date(r.timestamp) >= cutoff);
+
   document.getElementById('title').textContent = displayLabel(ACTIVE_TICKER);
-  document.getElementById('updated').textContent = rows.length
-    ? 'Last snapshot: ' + fmtTime(rows[rows.length - 1].timestamp)
+  document.getElementById('updated').textContent = allRows.length
+    ? 'Last snapshot: ' + fmtTime(allRows[allRows.length - 1].timestamp)
     : '';
 
   const wrap = document.querySelector('.wrap');
@@ -432,26 +466,33 @@ function render() {
 
   if (!rows.length) {
     document.getElementById('stats').innerHTML = '';
-    wrap.insertAdjacentHTML('beforeend', '<div class="empty">No data yet for this ticker — run collector.py once it\'s in the TICKERS list.</div>');
+    wrap.insertAdjacentHTML('beforeend', `<div class="empty">No snapshots for ${displayLabel(ACTIVE_TICKER)} in this time range &mdash; try a wider range, or run the collector again.</div>`);
     return;
   }
+
   renderStats(rows);
+
+  let pricePoints = null;
+  if (isListedSymbol(ACTIVE_TICKER)) {
+    pricePoints = await fetchPrice(ACTIVE_TICKER, ACTIVE_RANGE);
+  }
+
   try {
     if (typeof Chart === 'undefined') throw new Error('Chart.js failed to load');
-    renderCharts(rows);
+    renderCharts(rows, pricePoints);
   } catch (e) {
     ['volumeChart', 'sentimentChart'].forEach(id => {
       const canvas = document.getElementById(id);
-      canvas.insertAdjacentHTML('afterend', '<p style="font-family:var(--mono);font-size:11px;color:var(--bear);">Chart library failed to load — likely blocked by an ad/privacy blocker extension. Try disabling it for this site, or check the browser console for details.</p>');
+      canvas.insertAdjacentHTML('afterend', '<p style="font-size:12px;color:var(--bear);">Chart library failed to load — likely blocked by an ad/privacy blocker extension. Try disabling it for this site, or check the browser console for details.</p>');
     });
   }
-  renderSignalStrip(rows);
 }
 
 (async function init() {
   ALL_DATA = await loadData();
   const tickers = Object.keys(ALL_DATA);
   setupTickerSearch();
+  setupRangeBar();
   if (tickers.length) {
     selectTicker(tickers.includes('UBER') ? 'UBER' : tickers[0]);
   } else {
