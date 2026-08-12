@@ -132,7 +132,7 @@
   .stat-sub { font-size: 12px; color: var(--neutral); margin-top: 4px; }
 
   .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 20px 8px; margin-bottom: 20px; }
-  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
   .panel-title { font-size: 13px; font-weight: 600; color: var(--neutral); margin: 0; }
   .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
   .legend-item { font-size: 11px; color: var(--neutral); margin-left: 12px; }
@@ -168,6 +168,7 @@
       <div>
         <span class="legend-item"><span class="legend-dot" style="background:var(--ink)"></span>Mentions</span>
         <span class="legend-item" id="priceLegend1" style="display:none;"><span class="legend-dot" style="background:var(--price)"></span>Price</span>
+        <span class="legend-item">🟩 Mentions &gt; price &nbsp; 🟥 Mentions &lt; price</span>
       </div>
     </div>
     <canvas id="volumeChart" height="100"></canvas>
@@ -179,6 +180,7 @@
       <div>
         <span class="legend-item"><span class="legend-dot" style="background:#6b6656"></span>Sentiment</span>
         <span class="legend-item" id="priceLegend2" style="display:none;"><span class="legend-dot" style="background:var(--price)"></span>Price</span>
+        <span class="legend-item">🟩 Sentiment &gt; price &nbsp; 🟥 Sentiment &lt; price</span>
       </div>
     </div>
     <canvas id="sentimentChart" height="100"></canvas>
@@ -188,7 +190,7 @@
   <footer>
     Volume: X API tweets/counts/recent, summed over each polling window &middot; run manually from the repo's Actions tab.<br>
     Sentiment: lexicon score over a tweet sample per snapshot. Price: Yahoo Finance, fetched client-side &mdash; only shown for symbols that are actually listed.<br>
-    Directional signal, not investment advice.
+    Green/red fill shows which line is visually higher at each point (different scales, so read it as divergence, not a literal numeric gap). Directional signal, not investment advice.
   </footer>
 
 </div>
@@ -410,10 +412,14 @@ function renderCharts(rows, pricePoints, cutoff) {
   document.getElementById('priceLegend2').style.display = hasPrice ? 'inline' : 'none';
   document.getElementById('priceLegend2').innerHTML = '<span class="legend-dot" style="background:var(--price)"></span>Price';
 
+  const GREEN = 'rgba(26,135,84,0.22)';
+  const RED = 'rgba(192,57,43,0.22)';
+
   const volumeDatasets = [{
     label: 'Mentions', data: mentionPoints,
     borderColor: '#14171c', backgroundColor: 'rgba(20,23,28,0.05)',
-    fill: true, tension: 0.25, pointRadius: dotRadius(mentionPoints.length), pointBackgroundColor: '#14171c', borderWidth: 2, yAxisID: 'y',
+    fill: hasPrice ? { target: 1, above: GREEN, below: RED } : true,
+    tension: 0.25, pointRadius: dotRadius(mentionPoints.length), pointBackgroundColor: '#14171c', borderWidth: 2, yAxisID: 'y',
   }];
   if (hasPrice) {
     volumeDatasets.push({
@@ -439,18 +445,9 @@ function renderCharts(rows, pricePoints, cutoff) {
 
   const sentimentDatasets = [{
     label: 'Sentiment', data: sentimentPoints,
-    borderColor: '#6b6656',
-    backgroundColor: (ctx) => {
-      const chart = ctx.chart;
-      const c = chart.ctx, chartArea = chart.chartArea;
-      if (!chartArea) return 'rgba(0,0,0,0)';
-      const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-      g.addColorStop(0, 'rgba(26,135,84,0.2)');
-      g.addColorStop(0.5, 'rgba(139,141,149,0.08)');
-      g.addColorStop(1, 'rgba(192,57,43,0.2)');
-      return g;
-    },
-    fill: true, tension: 0.25, pointRadius: dotRadius(sentimentPoints.length), pointBackgroundColor: '#6b6656', borderWidth: 1.5, yAxisID: 'y',
+    borderColor: '#6b6656', backgroundColor: 'rgba(139,141,149,0.05)',
+    fill: hasPrice ? { target: 1, above: GREEN, below: RED } : true,
+    tension: 0.25, pointRadius: dotRadius(sentimentPoints.length), pointBackgroundColor: '#6b6656', borderWidth: 1.5, yAxisID: 'y',
   }];
   if (hasPrice) {
     sentimentDatasets.push({
