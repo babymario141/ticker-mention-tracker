@@ -188,6 +188,15 @@
       "bearish": 46,
       "neutral": 54,
       "sentiment_score": -0.543
+    },
+    {
+      "timestamp": "2026-08-12T06:17:32Z",
+      "mention_count": 3088,
+      "sample_size": 100,
+      "bullish": 9,
+      "bearish": 6,
+      "neutral": 85,
+      "sentiment_score": 0.01
     }
   ],
   "GRAB": [
@@ -379,6 +388,15 @@
       "bearish": 36,
       "neutral": 30,
       "sentiment_score": -0.092
+    },
+    {
+      "timestamp": "2026-08-12T06:17:32Z",
+      "mention_count": 14360,
+      "sample_size": 100,
+      "bullish": 15,
+      "bearish": 5,
+      "neutral": 80,
+      "sentiment_score": 0.037
     }
   ],
   "TSLA": [
@@ -570,6 +588,15 @@
       "bearish": 54,
       "neutral": 28,
       "sentiment_score": -0.459
+    },
+    {
+      "timestamp": "2026-08-12T06:17:32Z",
+      "mention_count": 1322,
+      "sample_size": 99,
+      "bullish": 15,
+      "bearish": 3,
+      "neutral": 81,
+      "sentiment_score": 0.044
     }
   ],
   "Unitree": [
@@ -761,6 +788,15 @@
       "bearish": 73,
       "neutral": 27,
       "sentiment_score": -1
+    },
+    {
+      "timestamp": "2026-08-12T06:17:32Z",
+      "mention_count": 154,
+      "sample_size": 99,
+      "bullish": 11,
+      "bearish": 3,
+      "neutral": 85,
+      "sentiment_score": 0.047
     }
   ]
 }
