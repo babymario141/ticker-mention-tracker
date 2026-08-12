@@ -363,18 +363,22 @@ function renderStats(rows) {
   `;
 }
 
-function timeScaleOptions() {
+function timeScaleOptions(cutoff) {
   return {
     x: {
       type: 'time',
       time: { tooltipFormat: 'MMM d, HH:mm' },
+      min: cutoff.getTime(),
+      max: Date.now(),
       grid: { display: false },
       ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 0 }
     }
   };
 }
 
-function renderCharts(rows, pricePoints) {
+function dotRadius(n) { return n > 1 ? 0 : 4; }
+
+function renderCharts(rows, pricePoints, cutoff) {
   const mentionPoints = rows.map(r => ({ x: new Date(r.timestamp).getTime(), y: r.mention_count }));
   const sentimentPoints = rows.map(r => ({ x: new Date(r.timestamp).getTime(), y: r.sentiment_score }));
 
@@ -388,13 +392,13 @@ function renderCharts(rows, pricePoints) {
   const volumeDatasets = [{
     label: 'Mentions', data: mentionPoints,
     borderColor: '#14171c', backgroundColor: 'rgba(20,23,28,0.05)',
-    fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2, yAxisID: 'y',
+    fill: true, tension: 0.25, pointRadius: dotRadius(mentionPoints.length), pointBackgroundColor: '#14171c', borderWidth: 2, yAxisID: 'y',
   }];
   if (hasPrice) {
     volumeDatasets.push({
       label: 'Price', data: pricePoints,
       borderColor: '#5b6cff', backgroundColor: 'transparent',
-      fill: false, tension: 0.15, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y1',
+      fill: false, tension: 0.15, pointRadius: dotRadius(pricePoints ? pricePoints.length : 0), pointBackgroundColor: '#5b6cff', borderWidth: 1.5, yAxisID: 'y1',
     });
   }
 
@@ -405,7 +409,7 @@ function renderCharts(rows, pricePoints) {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
-      scales: Object.assign(timeScaleOptions(), {
+      scales: Object.assign(timeScaleOptions(cutoff), {
         y: { position: 'left', grid: { color: '#eeeeef' }, ticks: { font: { family: 'Inter', size: 10 } } },
         y1: hasPrice ? { position: 'right', grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 } } } : { display: false }
       })
@@ -425,13 +429,13 @@ function renderCharts(rows, pricePoints) {
       g.addColorStop(1, 'rgba(192,57,43,0.2)');
       return g;
     },
-    fill: true, tension: 0.25, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y',
+    fill: true, tension: 0.25, pointRadius: dotRadius(sentimentPoints.length), pointBackgroundColor: '#6b6656', borderWidth: 1.5, yAxisID: 'y',
   }];
   if (hasPrice) {
     sentimentDatasets.push({
       label: 'Price', data: pricePoints,
       borderColor: '#5b6cff', backgroundColor: 'transparent',
-      fill: false, tension: 0.15, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y1',
+      fill: false, tension: 0.15, pointRadius: dotRadius(pricePoints ? pricePoints.length : 0), pointBackgroundColor: '#5b6cff', borderWidth: 1.5, yAxisID: 'y1',
     });
   }
 
@@ -442,7 +446,7 @@ function renderCharts(rows, pricePoints) {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
-      scales: Object.assign(timeScaleOptions(), {
+      scales: Object.assign(timeScaleOptions(cutoff), {
         y: { position: 'left', min: -1, max: 1, grid: { color: '#eeeeef' }, ticks: { font: { family: 'Inter', size: 10 } } },
         y1: hasPrice ? { position: 'right', grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 } } } : { display: false }
       })
@@ -479,7 +483,7 @@ async function render() {
 
   try {
     if (typeof Chart === 'undefined') throw new Error('Chart.js failed to load');
-    renderCharts(rows, pricePoints);
+    renderCharts(rows, pricePoints, cutoff);
   } catch (e) {
     ['volumeChart', 'sentimentChart'].forEach(id => {
       const canvas = document.getElementById(id);
