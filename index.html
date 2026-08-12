@@ -310,8 +310,11 @@ async function fetchPrice(symbol, rangeKey) {
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range.yahooRange}&interval=${range.yahooInterval}`;
   const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000); // don't hang forever on a slow proxy
+
   try {
-    const res = await fetch(proxyUrl);
+    const res = await fetch(proxyUrl, { signal: controller.signal });
     const json = await res.json();
     const result = json && json.chart && json.chart.result && json.chart.result[0];
     if (!result) return null;
@@ -323,8 +326,10 @@ async function fetchPrice(symbol, rangeKey) {
     priceCache[cacheKey] = points;
     return points;
   } catch (e) {
-    console.warn('Price fetch failed for', symbol, e);
+    console.warn('Price fetch failed or timed out for', symbol, e);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -387,7 +392,9 @@ function renderCharts(rows, pricePoints, cutoff) {
 
   const hasPrice = pricePoints && pricePoints.length > 0;
   document.getElementById('priceLegend1').style.display = hasPrice ? 'inline' : 'none';
+  document.getElementById('priceLegend1').innerHTML = '<span class="legend-dot" style="background:var(--price)"></span>Price';
   document.getElementById('priceLegend2').style.display = hasPrice ? 'inline' : 'none';
+  document.getElementById('priceLegend2').innerHTML = '<span class="legend-dot" style="background:var(--price)"></span>Price';
 
   const volumeDatasets = [{
     label: 'Mentions', data: mentionPoints,
@@ -476,18 +483,42 @@ async function render() {
 
   renderStats(rows);
 
-  let pricePoints = null;
-  if (isListedSymbol(ACTIVE_TICKER)) {
-    pricePoints = await fetchPrice(ACTIVE_TICKER, ACTIVE_RANGE);
-  }
+  const requestTicker = ACTIVE_TICKER;
+  const requestRange = ACTIVE_RANGE;
 
-  try {
-    if (typeof Chart === 'undefined') throw new Error('Chart.js failed to load');
-    renderCharts(rows, pricePoints, cutoff);
-  } catch (e) {
-    ['volumeChart', 'sentimentChart'].forEach(id => {
-      const canvas = document.getElementById(id);
-      canvas.insertAdjacentHTML('afterend', '<p style="font-size:12px;color:var(--bear);">Chart library failed to load — likely blocked by an ad/privacy blocker extension. Try disabling it for this site, or check the browser console for details.</p>');
+  const drawCharts = (pricePoints) => {
+    try {
+      if (typeof Chart === 'undefined') throw new Error('Chart.js failed to load');
+      renderCharts(rows, pricePoints, cutoff);
+    } catch (e) {
+      ['volumeChart', 'sentimentChart'].forEach(id => {
+        const canvas = document.getElementById(id);
+        const existing = canvas.nextElementSibling;
+        if (existing && existing.classList && existing.classList.contains('chart-error')) return;
+        canvas.insertAdjacentHTML('afterend', '<p class="chart-error" style="font-size:12px;color:var(--bear);">Chart library failed to load — likely blocked by an ad/privacy blocker extension. Try disabling it for this site, or check the browser console for details.</p>');
+      });
+    }
+  };
+
+  // Draw mentions/sentiment immediately — don't make the user wait on a slow price fetch.
+  drawCharts(null);
+
+  // Then fetch price in the background and re-draw with the overlay once it's ready,
+  // but only if the user hasn't already switched ticker/range in the meantime.
+  if (isListedSymbol(ACTIVE_TICKER)) {
+    document.getElementById('priceLegend1').style.display = 'inline';
+    document.getElementById('priceLegend1').textContent = '• Loading price…';
+    document.getElementById('priceLegend2').style.display = 'inline';
+    document.getElementById('priceLegend2').textContent = '• Loading price…';
+    fetchPrice(ACTIVE_TICKER, ACTIVE_RANGE).then(pricePoints => {
+      if (ACTIVE_TICKER === requestTicker && ACTIVE_RANGE === requestRange) {
+        if (pricePoints) {
+          drawCharts(pricePoints);
+        } else {
+          document.getElementById('priceLegend1').style.display = 'none';
+          document.getElementById('priceLegend2').style.display = 'none';
+        }
+      }
     });
   }
 }
